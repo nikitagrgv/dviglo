@@ -90,7 +90,7 @@ public:
         slider_ = new Slider();
         container->AddChild(slider_);
         slider_->SetStyleAuto();
-        slider_->SetRange(10);
+        slider_->SetRange(60);
         slider_->SetValue(1);
         slider_->SetMinHeight(20);
 
@@ -134,17 +134,19 @@ private:
             return;
         }
 
-        for (int i = 0; i < image_->GetWidth(); i++)
+        const int width = image_->GetWidth();
+        const int height = image_->GetHeight();
+        for (int i = 0; i < width; i++)
         {
-            for (int j = 0; j < image_->GetHeight(); j++)
+            for (int j = 0; j < height; j++)
             {
-                const auto fi = static_cast<float>(i) / factor_;
-                const auto fj = static_cast<float>(j) / factor_;
+                const auto fi = static_cast<float>(i - width / 2) / factor_;
+                const auto fj = static_cast<float>(j - height / 2) / factor_;
 
-                float r = Fract(fi * Sin(fj * 2.0f + 0.3f));
-                float g = Fract(fj * Sin(fi * 3.0f + 0.2f));
-                float b = Fract(fi * fj * Sin(fi - fj * 4.0f + 0.5f));
-                float a = 1;
+                float r = Fract(fi * Tan(fj * 2.0f + 0.3f));
+                float g = Fract(fj * Tan(fi * 3.0f + 0.2f));
+                float a = Fract(fi * fj * Sin(fi - fj * 4.0f + 0.5f));
+                float b = Fract(Sin(fi) * fj);
 
                 image_->SetPixel(i, j, Color(r, g, b, a));
             }
