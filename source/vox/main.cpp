@@ -66,19 +66,19 @@ public:
         auto* texture = new Texture2D();
         texture->SetSize(40, 40, Graphics::GetRGBFormat(), TEXTURE_DYNAMIC);
 
-        auto image = texture->GetImage();
-        for (int i = 0; i < 40; i++)
+        image_ = texture->GetImage();
+        for (int i = 0; i < image_->GetWidth(); i++)
         {
-            for (int j = 0; j < 40; j++)
+            for (int j = 0; j < image_->GetHeight(); j++)
             {
-                image->SetPixel(i, j, Color::CYAN);
+                image_->SetPixel(i, j, Color::GRAY);
             }
         }
 
-        auto* sprite = new ImageSprite();
-        container->AddChild(sprite);
-        sprite->SetStyleAuto();
-        sprite->setImage(image);
+        sprite_ = new ImageSprite();
+        container->AddChild(sprite_);
+        sprite_->SetStyleAuto();
+        sprite_->setImage(image_);
 
         auto* button = new Button();
         container->AddChild(button);
@@ -92,7 +92,12 @@ public:
     }
 
 private:
-    void on_update(StringHash /*event*/, VariantMap& data) { const float dt = data[Update::P_TIMESTEP].GetFloat(); }
+    void on_update(StringHash /*event*/, VariantMap& data)
+    {
+        const float dt = data[Update::P_TIMESTEP].GetFloat();
+
+        sprite_->setImage(image_);
+    }
 
     void on_key_down(StringHash /*event*/, VariantMap& data)
     {
@@ -103,8 +108,24 @@ private:
         }
         if (key == KEY_SPACE)
         {
+            update_image();
         }
     }
+
+    void update_image()
+    {
+        for (int i = 0; i < image_->GetWidth(); i++)
+        {
+            for (int j = 0; j < image_->GetHeight(); j++)
+            {
+                image_->SetPixel(i, j, Color::CYAN);
+            }
+        }
+    }
+
+private:
+    SharedPtr<Image> image_;
+    WeakPtr<ImageSprite> sprite_;
 };
 
 int main(int argc, char** argv)
