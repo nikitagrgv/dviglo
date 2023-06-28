@@ -16,6 +16,7 @@ build/
 /captures/
 .cxx/
 /demo/
+junk/
 
 # Output files
 /source/**/*.a
