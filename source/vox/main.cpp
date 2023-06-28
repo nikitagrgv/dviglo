@@ -4,6 +4,7 @@
 #include "dviglo/ui/check_box.h"
 #include "dviglo/ui/list_view.h"
 #include "dviglo/ui/scroll_view.h"
+#include "dviglo/ui/sprite.h"
 #include <dviglo/core/core_events.h>
 #include <dviglo/engine/application.h>
 #include <dviglo/engine/engine_defs.h>
@@ -13,8 +14,25 @@
 #include <dviglo/ui/ui.h>
 #include <dviglo/ui/ui_element.h>
 #include <dviglo/ui/ui_events.h>
+#include <dviglo/graphics_api/texture_2d.h>
+#include <dviglo/graphics/graphics.h>
 
 using namespace dviglo;
+
+class ImageSprite : public Sprite
+{
+public:
+    void setImage(const SharedPtr<Image>& image)
+    {
+        auto texture = new Texture2D();
+        texture->SetData(image);
+        SetTexture(texture);
+        SetFixedWidth(image->GetWidth());
+        SetFixedHeight(image->GetHeight());
+    }
+};
+
+
 
 class App : public Application
 {
@@ -31,29 +49,42 @@ public:
         subscribe_to_event(E_UPDATE, DV_HANDLER(App, on_update));
         subscribe_to_event(E_KEYDOWN, DV_HANDLER(App, on_key_down));
 
-
         auto* style = DV_RES_CACHE->GetResource<XmlFile>("ui/default_style.xml");
         DV_UI->GetRoot()->SetDefaultStyle(style);
 
-        auto scroll = new ListView();
+        auto* scroll = new ListView();
         DV_UI->GetRoot()->AddChild(scroll);
         scroll->SetStyleAuto();
         scroll->SetMinWidth(400);
         scroll->SetMinHeight(400);
 
-        auto container = new UiElement();
+        auto* container = new UiElement();
         container->SetLayout(LM_VERTICAL, 5, {3, 3, 3, 3});
         container->SetStyleAuto();
         scroll->SetContentElement(container);
 
-        for (int i = 0; i < 150; i++)
+        auto* texture = new Texture2D();
+        texture->SetSize(40, 40, Graphics::GetRGBFormat(), TEXTURE_DYNAMIC);
+
+        auto image = texture->GetImage();
+        for (int i = 0; i < 40; i++)
         {
-            auto* button = new Button();
-            container->AddChild(button);
-            button->SetMinHeight(24);
-            button->SetMinWidth(24);
-            button->SetStyleAuto();
+            for (int j = 0; j < 40; j++)
+            {
+                image->SetPixel(i, j, Color::CYAN);
+            }
         }
+
+        auto* sprite = new ImageSprite();
+        container->AddChild(sprite);
+        sprite->SetStyleAuto();
+        sprite->setImage(image);
+
+        auto* button = new Button();
+        container->AddChild(button);
+        button->SetMinHeight(24);
+        button->SetMinWidth(24);
+        button->SetStyleAuto();
 
         auto* checkbox = new CheckBox();
         container->AddChild(checkbox);
@@ -61,10 +92,7 @@ public:
     }
 
 private:
-    void on_update(StringHash /*event*/, VariantMap& data)
-    {
-        const float dt = data[Update::P_TIMESTEP].GetFloat();
-    }
+    void on_update(StringHash /*event*/, VariantMap& data) { const float dt = data[Update::P_TIMESTEP].GetFloat(); }
 
     void on_key_down(StringHash /*event*/, VariantMap& data)
     {
@@ -75,7 +103,6 @@ private:
         }
         if (key == KEY_SPACE)
         {
-
         }
     }
 };
