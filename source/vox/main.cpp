@@ -4,18 +4,20 @@
 #include "dviglo/ui/check_box.h"
 #include "dviglo/ui/list_view.h"
 #include "dviglo/ui/scroll_view.h"
+#include "dviglo/ui/slider.h"
 #include "dviglo/ui/sprite.h"
 #include <dviglo/core/core_events.h>
 #include <dviglo/engine/application.h>
 #include <dviglo/engine/engine_defs.h>
+#include <dviglo/graphics/graphics.h>
+#include <dviglo/graphics_api/texture_2d.h>
 #include <dviglo/input/input.h>
 #include <dviglo/io/log.h>
+#include <dviglo/math/math_defs.h>
 #include <dviglo/ui/button.h>
 #include <dviglo/ui/ui.h>
 #include <dviglo/ui/ui_element.h>
 #include <dviglo/ui/ui_events.h>
-#include <dviglo/graphics_api/texture_2d.h>
-#include <dviglo/graphics/graphics.h>
 
 using namespace dviglo;
 
@@ -25,14 +27,18 @@ public:
     void setImage(const SharedPtr<Image>& image)
     {
         auto texture = new Texture2D();
+        texture->SetFilterMode(FILTER_NEAREST);
         texture->SetData(image);
         SetTexture(texture);
-        SetFixedWidth(image->GetWidth());
-        SetFixedHeight(image->GetHeight());
+        SetFixedWidth(static_cast<int>(static_cast<float>(image->GetWidth()) * scale_));
+        SetFixedHeight(static_cast<int>(static_cast<float>(image->GetHeight()) * scale_));
     }
+
+    void setScale(float scale) { scale_ = scale; }
+
+private:
+    float scale_ = 1;
 };
-
-
 
 class App : public Application
 {
@@ -55,8 +61,8 @@ public:
         auto* scroll = new ListView();
         DV_UI->GetRoot()->AddChild(scroll);
         scroll->SetStyleAuto();
-        scroll->SetMinWidth(400);
-        scroll->SetMinHeight(400);
+        scroll->SetMinWidth(800);
+        scroll->SetMinHeight(800);
 
         auto* container = new UiElement();
         container->SetLayout(LM_VERTICAL, 5, {3, 3, 3, 3});
@@ -64,7 +70,7 @@ public:
         scroll->SetContentElement(container);
 
         auto* texture = new Texture2D();
-        texture->SetSize(40, 40, Graphics::GetRGBFormat(), TEXTURE_DYNAMIC);
+        texture->SetSize(200, 200, Graphics::GetRGBFormat(), TEXTURE_DYNAMIC, 0);
 
         image_ = texture->GetImage();
         for (int i = 0; i < image_->GetWidth(); i++)
@@ -79,6 +85,14 @@ public:
         container->AddChild(sprite_);
         sprite_->SetStyleAuto();
         sprite_->setImage(image_);
+        sprite_->setScale(3);
+
+        slider_ = new Slider();
+        container->AddChild(slider_);
+        slider_->SetStyleAuto();
+        slider_->SetRange(10);
+        slider_->SetValue(1);
+        slider_->SetMinHeight(20);
 
         auto* button = new Button();
         container->AddChild(button);
@@ -86,17 +100,19 @@ public:
         button->SetMinWidth(24);
         button->SetStyleAuto();
 
-        auto* checkbox = new CheckBox();
-        container->AddChild(checkbox);
-        checkbox->SetStyleAuto();
+        checkbox_ = new CheckBox();
+        container->AddChild(checkbox_);
+        checkbox_->SetChecked(true);
+        checkbox_->SetStyleAuto();
     }
 
 private:
     void on_update(StringHash /*event*/, VariantMap& data)
     {
         const float dt = data[Update::P_TIMESTEP].GetFloat();
-
+        factor_ = (slider_->GetValue());
         sprite_->setImage(image_);
+        update_image();
     }
 
     void on_key_down(StringHash /*event*/, VariantMap& data)
@@ -108,24 +124,39 @@ private:
         }
         if (key == KEY_SPACE)
         {
-            update_image();
         }
     }
 
     void update_image()
     {
+        if (!checkbox_->IsChecked())
+        {
+            return;
+        }
+
         for (int i = 0; i < image_->GetWidth(); i++)
         {
             for (int j = 0; j < image_->GetHeight(); j++)
             {
-                image_->SetPixel(i, j, Color::CYAN);
+                const auto fi = static_cast<float>(i) / factor_;
+                const auto fj = static_cast<float>(j) / factor_;
+
+                float r = Fract(fi * Sin(fj * 2.0f + 0.3f));
+                float g = Fract(fj * Sin(fi * 3.0f + 0.2f));
+                float b = Fract(fi * fj * Sin(fi - fj * 4.0f + 0.5f));
+                float a = 1;
+
+                image_->SetPixel(i, j, Color(r, g, b, a));
             }
         }
     }
 
 private:
+    float factor_ = 1;
     SharedPtr<Image> image_;
+    WeakPtr<CheckBox> checkbox_;
     WeakPtr<ImageSprite> sprite_;
+    WeakPtr<Slider> slider_;
 };
 
 int main(int argc, char** argv)
