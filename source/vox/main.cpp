@@ -1,24 +1,24 @@
 #include <iostream>
 
-//#include "dviglo/resource/resource_cache.h"
-//#include "dviglo/ui/check_box.h"
-//#include "dviglo/ui/list_view.h"
-//#include "dviglo/ui/scroll_view.h"
-//#include "dviglo/ui/slider.h"
-//#include "dviglo/ui/sprite.h"
-//#include <dviglo/core/core_events.h>
-//#include <dviglo/engine/application.h>
-//#include <dviglo/engine/engine_defs.h>
-//#include <dviglo/graphics/graphics.h>
-//#include <dviglo/graphics_api/texture_2d.h>
-//#include <dviglo/input/input.h>
-//#include <dviglo/io/log.h>
-//#include <dviglo/math/math_defs.h>
-//#include <dviglo/ui/button.h>
-//#include <dviglo/ui/ui.h>
-//#include <dviglo/ui/ui_element.h>
-//#include <dviglo/ui/ui_events.h>
-//#include <dviglo/math/random.h>
+// #include "dviglo/resource/resource_cache.h"
+// #include "dviglo/ui/check_box.h"
+// #include "dviglo/ui/list_view.h"
+// #include "dviglo/ui/scroll_view.h"
+// #include "dviglo/ui/slider.h"
+// #include "dviglo/ui/sprite.h"
+// #include <dviglo/core/core_events.h>
+// #include <dviglo/engine/application.h>
+// #include <dviglo/engine/engine_defs.h>
+// #include <dviglo/graphics/graphics.h>
+// #include <dviglo/graphics_api/texture_2d.h>
+// #include <dviglo/input/input.h>
+// #include <dviglo/io/log.h>
+// #include <dviglo/math/math_defs.h>
+// #include <dviglo/ui/button.h>
+// #include <dviglo/ui/ui.h>
+// #include <dviglo/ui/ui_element.h>
+// #include <dviglo/ui/ui_events.h>
+// #include <dviglo/math/random.h>
 #include <dviglo/dviglo_all.h>
 
 using namespace dviglo;
@@ -73,6 +73,13 @@ public:
     {
     }
 
+    Vector2 randomVector(Vector2 seed)
+    {
+        constexpr float second_seed = 123;
+        return Vector2{StableRandom(Vector3{seed.x, seed.y, 0}),
+                       StableRandom(Vector3{seed.x, seed.y, second_seed})};
+    }
+
     void draw() override
     {
         const int w = getWidth();
@@ -82,18 +89,25 @@ public:
         {
             for (int j = 0; j < h; j++)
             {
-                const auto fi = static_cast<float>(i - w / 2) / 5;
-                const auto fj = static_cast<float>(j - h / 2) / 5;
+                const float x = static_cast<float>(i) + offset.x;
+                const float y = static_cast<float>(j) + offset.y;
+                const Vector2 xy{x, y};
 
-                float r = Fract(fi * Tan(fj * 2.0f + 0.3f));
-                float g = Fract(fj * Tan(fi * 3.0f + 0.2f));
-                float a = Fract(fi * fj * Sin(fi - fj * 4.0f + 0.5f));
-                float b = Fract(Sin(fi) * fj);
+                auto col = [this, i, j](float r, float g, float b) { set(i, j, {r, g, b}); };
 
-                set(i, j, Color(r, g, b, a));
+                float r{};
+                float g{};
+
+                Vector2 rv = randomVector(xy);
+                r = rv.x;
+                g = rv.y;
+
+                col(r, g, 0);
             }
         }
     }
+
+    Vector2 offset{0, 0};
 };
 
 class ImageSprite : public Sprite
@@ -166,7 +180,10 @@ public:
 
             int getWidth() const override { return image_->GetWidth(); }
             int getHeight() const override { return image_->GetHeight(); }
-            void set(int x, int y, const dviglo::Color& color) override { image_->SetPixel(x, y, color); }
+            void set(int x, int y, const dviglo::Color& color) override
+            {
+                image_->SetPixel(x, y, color);
+            }
 
         private:
             WeakPtr<Image> image_;
@@ -181,13 +198,22 @@ public:
         sprite_->setImage(image_);
         sprite_->setScale(3);
 
-        slider_ = new Slider();
-        container->AddChild(slider_);
-        slider_->SetStyleAuto();
-        slider_->SetRange(60);
-        slider_->SetValue(1);
-        slider_->SetMinHeight(20);
-
+        {
+            slider_x_ = new Slider();
+            container->AddChild(slider_x_);
+            slider_x_->SetStyleAuto();
+            slider_x_->SetRange(20);
+            slider_x_->SetValue(10);
+            slider_x_->SetMinHeight(30);
+        }
+        {
+            slider_y_ = new Slider();
+            container->AddChild(slider_y_);
+            slider_y_->SetStyleAuto();
+            slider_y_->SetRange(20);
+            slider_y_->SetValue(10);
+            slider_y_->SetMinHeight(30);
+        }
         auto* button = new Button();
         container->AddChild(button);
         button->SetMinHeight(24);
@@ -226,17 +252,19 @@ private:
         {
             return;
         }
-
+        painter_->offset.x = slider_x_->GetValue() - slider_x_->GetRange() / 2;
+        painter_->offset.y = slider_y_->GetValue() - slider_y_->GetRange() / 2;
         painter_->draw();
     }
 
 private:
-    std::unique_ptr<Painter> painter_;
+    std::unique_ptr<ImagePainter> painter_;
 
     SharedPtr<Image> image_;
     WeakPtr<CheckBox> checkbox_;
     WeakPtr<ImageSprite> sprite_;
-    WeakPtr<Slider> slider_;
+    WeakPtr<Slider> slider_x_;
+    WeakPtr<Slider> slider_y_;
 };
 
 int main(int argc, char** argv)
