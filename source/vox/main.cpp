@@ -73,21 +73,41 @@ public:
     {
     }
 
-    Vector2 randomVector(Vector2 seed)
+    Vector2 randomVector(Vector2 pos)
     {
-        constexpr float second_seed = 123;
-        return Vector2{StableRandom(Vector3{seed.x, seed.y, 0}),
-                       StableRandom(Vector3{seed.x, seed.y, second_seed})};
+        constexpr float seed = 123;
+        return Vector2{StableRandom(Vector3{pos.x, pos.y, 0}),
+                       StableRandom(Vector3{pos.x, pos.y, seed})};
     }
 
-    Vector2 randomVectorAligned(Vector2 seed, float align)
+    Vector2 randomVector(IntVector2 pos)
+    {
+        constexpr float seed = 123;
+        return Vector2{StableRandom(Vector3{(float)pos.x, (float)pos.y, 0}),
+                       StableRandom(Vector3{(float)pos.x, (float)pos.y, seed})};
+    }
+
+    Vector2 randomVectorAligned(Vector2 pos, float align)
     {
         Vector2 aligned;
-        aligned.x = Floor(seed.x / align) * align;
-        aligned.y = Floor(seed.y / align) * align;
+        aligned.x = Floor(pos.x / align) * align;
+        aligned.y = Floor(pos.y / align) * align;
         return randomVector(aligned);
     }
 
+    float gridGradient(Vector2 pos, float align)
+    {
+        IntVector2 cell;
+        cell.x = (int)(Floor(pos.x / align) * align);
+        cell.y = (int)(Floor(pos.y / align) * align);
+
+        Vector2 loc_pos;
+        loc_pos.x = Fract(pos.x / align) * align - align/2;
+        loc_pos.y = Fract(pos.y / align) * align - align/2;
+
+        const Vector2 dir = (randomVector(cell) - Vector2(0.5f, 0.5f)).normalized();
+        return dir.DotProduct(loc_pos.normalized());
+    }
 
     void draw() override
     {
@@ -105,12 +125,19 @@ public:
 
                 float r{};
                 float g{};
+                float b{};
 
-                Vector2 rv = randomVectorAligned(xy, 2);
-                r = rv.x;
-                g = rv.y;
+                float intensity = gridGradient(xy, 10);
+                if (intensity > 0)
+                {
+                    r = intensity;
+                }
+                else
+                {
+                    b = -intensity;
+                }
 
-                col(r, g, 0);
+                col(r, 0, b);
             }
         }
 
