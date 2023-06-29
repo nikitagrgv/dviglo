@@ -21,6 +21,79 @@
 
 using namespace dviglo;
 
+class Paintable
+{
+public:
+    virtual ~Paintable() = default;
+    virtual int getWidth() const = 0;
+    virtual int getHeight() const = 0;
+    virtual void set(int x, int y, const Color& color) = 0;
+};
+
+class Painter
+{
+public:
+    virtual ~Painter() = default;
+    Painter(std::unique_ptr<Paintable> paintable)
+        : paintable_(std::move(paintable))
+    {
+    }
+
+    int getWidth() const
+    {
+        assert(paintable_);
+        return paintable_->getWidth();
+    }
+
+    int getHeight() const
+    {
+        assert(paintable_);
+        return paintable_->getHeight();
+    }
+
+    void set(int x, int y, const Color& color)
+    {
+        assert(paintable_);
+        paintable_->set(x, y, color);
+    }
+
+    virtual void draw() = 0;
+
+private:
+    std::unique_ptr<Paintable> paintable_;
+};
+
+class ImagePainter : public Painter
+{
+public:
+    ImagePainter(std::unique_ptr<Paintable> paintable)
+        : Painter(std::move(paintable))
+    {
+    }
+
+    void draw() override
+    {
+        const int w = getWidth();
+        const int h = getHeight();
+
+        for (int i = 0; i < w; i++)
+        {
+            for (int j = 0; j < h; j++)
+            {
+                const auto fi = static_cast<float>(i - w / 2) / 5;
+                const auto fj = static_cast<float>(j - h / 2) / 5;
+
+                float r = Fract(fi * Tan(fj * 2.0f + 0.3f));
+                float g = Fract(fj * Tan(fi * 3.0f + 0.2f));
+                float a = Fract(fi * fj * Sin(fi - fj * 4.0f + 0.5f));
+                float b = Fract(Sin(fi) * fj);
+
+                set(i, j, Color(r, g, b, a));
+            }
+        }
+    }
+};
+
 class ImageSprite : public Sprite
 {
 public:
@@ -81,6 +154,25 @@ public:
             }
         }
 
+        class PaintableImage : public Paintable
+        {
+        public:
+            PaintableImage(WeakPtr<Image> image)
+                : image_(std::move(image))
+            {
+            }
+
+            int getWidth() const override { return image_->GetWidth(); }
+            int getHeight() const override { return image_->GetHeight(); }
+            void set(int x, int y, const dviglo::Color& color) override { image_->SetPixel(x, y, color); }
+
+        private:
+            WeakPtr<Image> image_;
+        };
+        std::unique_ptr<Paintable> paintable = std::make_unique<PaintableImage>(image_);
+
+        painter_ = std::make_unique<ImagePainter>(std::move(paintable));
+
         sprite_ = new ImageSprite();
         container->AddChild(sprite_);
         sprite_->SetStyleAuto();
@@ -110,7 +202,6 @@ private:
     void on_update(StringHash /*event*/, VariantMap& data)
     {
         const float dt = data[Update::P_TIMESTEP].GetFloat();
-        factor_ = (slider_->GetValue());
         sprite_->setImage(image_);
         update_image();
     }
@@ -134,27 +225,12 @@ private:
             return;
         }
 
-        const int width = image_->GetWidth();
-        const int height = image_->GetHeight();
-        for (int i = 0; i < width; i++)
-        {
-            for (int j = 0; j < height; j++)
-            {
-                const auto fi = static_cast<float>(i - width / 2) / factor_;
-                const auto fj = static_cast<float>(j - height / 2) / factor_;
-
-                float r = Fract(fi * Tan(fj * 2.0f + 0.3f));
-                float g = Fract(fj * Tan(fi * 3.0f + 0.2f));
-                float a = Fract(fi * fj * Sin(fi - fj * 4.0f + 0.5f));
-                float b = Fract(Sin(fi) * fj);
-
-                image_->SetPixel(i, j, Color(r, g, b, a));
-            }
-        }
+        painter_->draw();
     }
 
 private:
-    float factor_ = 1;
+    std::unique_ptr<Painter> painter_;
+
     SharedPtr<Image> image_;
     WeakPtr<CheckBox> checkbox_;
     WeakPtr<ImageSprite> sprite_;
