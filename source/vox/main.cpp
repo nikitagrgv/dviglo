@@ -1,23 +1,25 @@
 #include <iostream>
 
-#include "dviglo/resource/resource_cache.h"
-#include "dviglo/ui/check_box.h"
-#include "dviglo/ui/list_view.h"
-#include "dviglo/ui/scroll_view.h"
-#include "dviglo/ui/slider.h"
-#include "dviglo/ui/sprite.h"
-#include <dviglo/core/core_events.h>
-#include <dviglo/engine/application.h>
-#include <dviglo/engine/engine_defs.h>
-#include <dviglo/graphics/graphics.h>
-#include <dviglo/graphics_api/texture_2d.h>
-#include <dviglo/input/input.h>
-#include <dviglo/io/log.h>
-#include <dviglo/math/math_defs.h>
-#include <dviglo/ui/button.h>
-#include <dviglo/ui/ui.h>
-#include <dviglo/ui/ui_element.h>
-#include <dviglo/ui/ui_events.h>
+//#include "dviglo/resource/resource_cache.h"
+//#include "dviglo/ui/check_box.h"
+//#include "dviglo/ui/list_view.h"
+//#include "dviglo/ui/scroll_view.h"
+//#include "dviglo/ui/slider.h"
+//#include "dviglo/ui/sprite.h"
+//#include <dviglo/core/core_events.h>
+//#include <dviglo/engine/application.h>
+//#include <dviglo/engine/engine_defs.h>
+//#include <dviglo/graphics/graphics.h>
+//#include <dviglo/graphics_api/texture_2d.h>
+//#include <dviglo/input/input.h>
+//#include <dviglo/io/log.h>
+//#include <dviglo/math/math_defs.h>
+//#include <dviglo/ui/button.h>
+//#include <dviglo/ui/ui.h>
+//#include <dviglo/ui/ui_element.h>
+//#include <dviglo/ui/ui_events.h>
+//#include <dviglo/math/random.h>
+#include <dviglo/dviglo_all.h>
 
 using namespace dviglo;
 
