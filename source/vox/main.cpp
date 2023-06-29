@@ -87,6 +87,22 @@ public:
                        StableRandom(Vector3{(float)pos.x, (float)pos.y, seed})};
     }
 
+    Vector2 randomDir(Vector2 pos)
+    {
+        constexpr float seed = 123;
+        return Vector2{StableRandom(Vector3{pos.x, pos.y, 0}) - 0.5f,
+                       StableRandom(Vector3{pos.x, pos.y, seed}) - 0.5f}
+            .normalized();
+    }
+
+    Vector2 randomDir(IntVector2 pos)
+    {
+        constexpr float seed = 123;
+        return Vector2{StableRandom(Vector3{(float)pos.x, (float)pos.y, 0}) - 0.5f,
+                       StableRandom(Vector3{(float)pos.x, (float)pos.y, seed}) - 0.5f}
+            .normalized();
+    }
+
     Vector2 randomVectorAligned(Vector2 pos, float align)
     {
         Vector2 aligned;
@@ -95,18 +111,51 @@ public:
         return randomVector(aligned);
     }
 
+    float interpolate(float a, float b, float w) { return (b - a) * w + a; }
+
     float gridGradient(Vector2 pos, float align)
     {
-        IntVector2 cell;
-        cell.x = (int)(Floor(pos.x / align) * align);
-        cell.y = (int)(Floor(pos.y / align) * align);
+        const float half_align = align / 2;
+        const int x0 = FloorToInt(pos.x / align);
+        const int y0 = FloorToInt(pos.y / align);
+        const int x1 = x0 + 1;
+        const int y1 = y0 + 1;
 
-        Vector2 loc_pos;
-        loc_pos.x = Fract(pos.x / align) * align - align/2;
-        loc_pos.y = Fract(pos.y / align) * align - align/2;
+        const Vector2 weight = (pos - Vector2(x0, y0) * align) / align;
 
-        const Vector2 dir = (randomVector(cell) - Vector2(0.5f, 0.5f)).normalized();
-        return dir.DotProduct(loc_pos.normalized());
+        const Vector2 loc_pos = pos - Vector2(x0, y0) * align - Vector2(half_align, half_align);
+//        const Vector2 loc_dir = loc_pos.normalized();
+
+        const Vector2 loc_dir00 = (loc_pos - Vector2(-half_align, -half_align)).normalized();
+        const Vector2 loc_dir10 = (loc_pos - Vector2(+half_align, -half_align)).normalized();
+        const Vector2 loc_dir01 = (loc_pos - Vector2(-half_align, +half_align)).normalized();
+        const Vector2 loc_dir11 = (loc_pos - Vector2(+half_align, +half_align)).normalized();
+
+        const Vector2 rand_dir00 = randomDir(IntVector2{x0, y0});
+        const Vector2 rand_dir10 = randomDir(IntVector2{x1, y0});
+        const Vector2 rand_dir01 = randomDir(IntVector2{x0, y1});
+        const Vector2 rand_dir11 = randomDir(IntVector2{x1, y1});
+
+        const float r00 = rand_dir00.DotProduct(loc_dir00);
+        const float r10 = rand_dir10.DotProduct(loc_dir10);
+        const float r01 = rand_dir01.DotProduct(loc_dir01);
+        const float r11 = rand_dir11.DotProduct(loc_dir11);
+
+        return interpolate(interpolate(r00, r10, weight.x), interpolate(r01, r11, weight.x),
+                           weight.y);
+
+        //        const Vector2 dir = (randomVector(cell) - Vector2(0.5f, 0.5f)).normalized();
+
+//        IntVector2 cell;
+//        cell.x = (int)(Floor(pos.x / align) * align);
+//        cell.y = (int)(Floor(pos.y / align) * align);
+
+//        Vector2 loc_pos;
+//        loc_pos.x = Fract(pos.x / align) * align - align/2;
+//        loc_pos.y = Fract(pos.y / align) * align - align/2;
+
+//        const Vector2 dir = (randomVector(cell) - Vector2(0.5f, 0.5f)).normalized();
+//        return dir.DotProduct(loc_pos.normalized());
     }
 
     void draw() override
@@ -123,21 +172,23 @@ public:
                 const Vector2 xy{x, y};
                 const auto col = [this, i, j](float r, float g, float b) { set(j, i, {r, g, b}); };
 
-                float r{};
-                float g{};
-                float b{};
+//                float r{};
+//                float g{};
+//                float b{};
+//
+//                float intensity = gridGradient(xy, 10);
+//                if (intensity > 0)
+//                {
+//                    r = intensity;
+//                }
+//                else
+//                {
+//                    b = -intensity;
+//                }
+//                col(r, 0, b);
 
-                float intensity = gridGradient(xy, 10);
-                if (intensity > 0)
-                {
-                    r = intensity;
-                }
-                else
-                {
-                    b = -intensity;
-                }
-
-                col(r, 0, b);
+                float intensity = (gridGradient(xy, 10) + 1) * 0.5f;
+                col(intensity, intensity, intensity);
             }
         }
 
