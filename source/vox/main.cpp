@@ -106,7 +106,7 @@ public:
                 float r{};
                 float g{};
 
-                Vector2 rv = randomVectorAligned(xy, 10);
+                Vector2 rv = randomVectorAligned(xy, 2);
                 r = rv.x;
                 g = rv.y;
 
@@ -176,7 +176,7 @@ public:
         scroll->SetContentElement(container);
 
         auto* texture = new Texture2D();
-        texture->SetSize(200, 200, Graphics::GetRGBFormat(), TEXTURE_DYNAMIC, 0);
+        texture->SetSize(160, 160, Graphics::GetRGBFormat(), TEXTURE_DYNAMIC, 0);
 
         image_ = texture->GetImage();
         for (int i = 0; i < image_->GetWidth(); i++)
@@ -213,7 +213,7 @@ public:
         container->AddChild(sprite_);
         sprite_->SetStyleAuto();
         sprite_->setImage(image_);
-        sprite_->setScale(3);
+        sprite_->setScale(4);
 
         {
             slider_x_ = new Slider();
