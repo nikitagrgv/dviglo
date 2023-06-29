@@ -111,7 +111,10 @@ public:
         return randomVector(aligned);
     }
 
-    float interpolate(float a, float b, float w) { return (b - a) * w + a; }
+    float interpolate(float a, float b, float w) {
+//        return (b - a) * ((w * (w * 6.0 - 15.0) + 10.0) * w * w * w) + a;
+        return (b - a) * w + a;
+    }
 
     float gridGradient(Vector2 pos, float align)
     {
@@ -172,23 +175,23 @@ public:
                 const Vector2 xy{x, y};
                 const auto col = [this, i, j](float r, float g, float b) { set(j, i, {r, g, b}); };
 
-//                float r{};
-//                float g{};
-//                float b{};
-//
-//                float intensity = gridGradient(xy, 10);
-//                if (intensity > 0)
-//                {
-//                    r = intensity;
-//                }
-//                else
-//                {
-//                    b = -intensity;
-//                }
-//                col(r, 0, b);
+                float r{};
+                float g{};
+                float b{};
 
-                float intensity = (gridGradient(xy, 10) + 1) * 0.5f;
-                col(intensity, intensity, intensity);
+                float intensity = gridGradient(xy, 20);
+                if (intensity > 0)
+                {
+                    r = intensity;
+                }
+                else
+                {
+                    b = -intensity;
+                }
+                col(r, 0, b);
+
+//                float intensity = (gridGradient(xy, 10) + 1) * 0.5f;
+//                col(intensity, intensity, intensity);
             }
         }
 
@@ -254,7 +257,7 @@ public:
         scroll->SetContentElement(container);
 
         auto* texture = new Texture2D();
-        texture->SetSize(160, 160, Graphics::GetRGBFormat(), TEXTURE_DYNAMIC, 0);
+        texture->SetSize(220, 220, Graphics::GetRGBFormat(), TEXTURE_DYNAMIC, 0);
 
         image_ = texture->GetImage();
         for (int i = 0; i < image_->GetWidth(); i++)
@@ -291,7 +294,7 @@ public:
         container->AddChild(sprite_);
         sprite_->SetStyleAuto();
         sprite_->setImage(image_);
-        sprite_->setScale(4);
+        sprite_->setScale(3);
 
         {
             slider_x_ = new Slider();
