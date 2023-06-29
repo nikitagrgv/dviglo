@@ -80,29 +80,46 @@ public:
                        StableRandom(Vector3{seed.x, seed.y, second_seed})};
     }
 
+    Vector2 randomVectorAligned(Vector2 seed, float align)
+    {
+        Vector2 aligned;
+        aligned.x = Floor(seed.x / align) * align;
+        aligned.y = Floor(seed.y / align) * align;
+        return randomVector(aligned);
+    }
+
+
     void draw() override
     {
         const int w = getWidth();
         const int h = getHeight();
 
-        for (int i = 0; i < w; i++)
+        for (int i = 0; i < h; i++)
         {
-            for (int j = 0; j < h; j++)
+            for (int j = 0; j < w; j++)
             {
-                const float x = static_cast<float>(i) + offset.x;
-                const float y = static_cast<float>(j) + offset.y;
+                const float x = static_cast<float>(j) - offset.x * 100;
+                const float y = static_cast<float>(i) - offset.y * 100;
                 const Vector2 xy{x, y};
-
-                auto col = [this, i, j](float r, float g, float b) { set(i, j, {r, g, b}); };
+                const auto col = [this, i, j](float r, float g, float b) { set(j, i, {r, g, b}); };
 
                 float r{};
                 float g{};
 
-                Vector2 rv = randomVector(xy);
+                Vector2 rv = randomVectorAligned(xy, 10);
                 r = rv.x;
                 g = rv.y;
 
                 col(r, g, 0);
+            }
+        }
+
+        for (int i = 0; i < Min(4, h); i++)
+        {
+            for (int j = 0; j < w; j++)
+            {
+                const float r = (j % 2 == 0) ? 0 : 1;
+                set(j, i, {r, r, r});
             }
         }
     }
@@ -202,28 +219,24 @@ public:
             slider_x_ = new Slider();
             container->AddChild(slider_x_);
             slider_x_->SetStyleAuto();
-            slider_x_->SetRange(20);
-            slider_x_->SetValue(10);
+            slider_x_->SetRange(2);
+            slider_x_->SetValue(1);
             slider_x_->SetMinHeight(30);
         }
         {
             slider_y_ = new Slider();
             container->AddChild(slider_y_);
             slider_y_->SetStyleAuto();
-            slider_y_->SetRange(20);
-            slider_y_->SetValue(10);
+            slider_y_->SetRange(2);
+            slider_y_->SetValue(1);
             slider_y_->SetMinHeight(30);
         }
-        auto* button = new Button();
-        container->AddChild(button);
-        button->SetMinHeight(24);
-        button->SetMinWidth(24);
-        button->SetStyleAuto();
-
         checkbox_ = new CheckBox();
         container->AddChild(checkbox_);
         checkbox_->SetChecked(true);
         checkbox_->SetStyleAuto();
+        checkbox_->SetFixedWidth(40);
+        checkbox_->SetFixedHeight(40);
     }
 
 private:
