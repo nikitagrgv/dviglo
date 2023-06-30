@@ -156,6 +156,13 @@ public:
         subscribe_to_event(E_UPDATE, DV_HANDLER(App, on_update));
         subscribe_to_event(E_KEYDOWN, DV_HANDLER(App, on_key_down));
 
+        init_gui();
+        init_world();
+    }
+
+private:
+    void init_gui()
+    {
         auto* style = DV_RES_CACHE->GetResource<XmlFile>("ui/default_style.xml");
         DV_UI->GetRoot()->SetDefaultStyle(style);
 
@@ -242,7 +249,33 @@ public:
         fps_text_->SetText("fasfaf");
     }
 
-private:
+    void init_world()
+    {
+        auto cache = DV_RES_CACHE;
+
+        scene_ = new Scene();
+        scene_->create_component<Octree>();
+
+        auto light_node = new Node();
+        scene_->AddChild(light_node);
+        auto light = new Light();
+        light_node->AddComponent(light, 0, REPLICATED);
+
+        camera_node_ = new Node();
+        scene_->AddChild(camera_node_);
+        auto camera = new Camera();
+        camera_node_->AddComponent(camera, 0, REPLICATED);
+
+        auto box_node = new Node();
+        scene_->AddChild(box_node);
+        auto model = new StaticModel();
+        box_node->AddComponent(model, 0, REPLICATED);
+        model->SetModel(cache->GetResource<Model>("models/box.mdl"));
+
+        SharedPtr<Viewport> viewport(new Viewport(scene_, camera));
+        DV_RENDERER->SetViewport(0, viewport);
+    }
+
     void on_update(StringHash /*event*/, VariantMap& data)
     {
         const float dt = data[Update::P_TIMESTEP].GetFloat();
@@ -275,6 +308,9 @@ private:
     }
 
 private:
+    SharedPtr<Scene> scene_;
+    SharedPtr<Node> camera_node_;
+
     std::unique_ptr<ImagePainter> painter_;
 
     SharedPtr<Image> image_;
