@@ -22,10 +22,10 @@ dviglo::Vector2 randomGradient(int ix, int iy)
     b *= 1911520717;
     a ^= b << s | b >> w - s;
     a *= 2048419325;
-    float random = a * (3.14159265 / ~(~0u >> 1));
+    float random = a * (180. / ~(~0u >> 1));
     dviglo::Vector2 v;
-    v.x = /*dviglo::*/cos(random);
-    v.y = /*dviglo::*/sin(random);
+    v.x = dviglo::Cos(random);
+    v.y = dviglo::Sin(random);
     return v;
 }
 
