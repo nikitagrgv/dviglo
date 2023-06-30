@@ -21,6 +21,8 @@
 // #include <dviglo/math/random.h>
 #include <dviglo/dviglo_all.h>
 
+#include "PerlinNoise.h"
+
 using namespace dviglo;
 
 class Paintable
@@ -73,94 +75,6 @@ public:
     {
     }
 
-    Vector2 randomVector(Vector2 pos)
-    {
-        constexpr float seed = 123;
-        return Vector2{StableRandom(Vector3{pos.x, pos.y, 0}),
-                       StableRandom(Vector3{pos.x, pos.y, seed})};
-    }
-
-    Vector2 randomVector(IntVector2 pos)
-    {
-        constexpr float seed = 123;
-        return Vector2{StableRandom(Vector3{(float)pos.x, (float)pos.y, 0}),
-                       StableRandom(Vector3{(float)pos.x, (float)pos.y, seed})};
-    }
-
-    Vector2 randomDir(Vector2 pos)
-    {
-        constexpr float seed = 123;
-        return Vector2{StableRandom(Vector3{pos.x, pos.y, 0}) - 0.5f,
-                       StableRandom(Vector3{pos.x, pos.y, seed}) - 0.5f}
-            .normalized();
-    }
-
-    Vector2 randomDir(IntVector2 pos)
-    {
-        constexpr float seed = 123;
-        return Vector2{StableRandom(Vector3{(float)pos.x, (float)pos.y, 0}) - 0.5f,
-                       StableRandom(Vector3{(float)pos.x, (float)pos.y, seed}) - 0.5f}
-            .normalized();
-    }
-
-    Vector2 randomVectorAligned(Vector2 pos, float align)
-    {
-        Vector2 aligned;
-        aligned.x = Floor(pos.x / align) * align;
-        aligned.y = Floor(pos.y / align) * align;
-        return randomVector(aligned);
-    }
-
-    float interpolate(float a, float b, float w) {
-//        return (b - a) * ((w * (w * 6.0 - 15.0) + 10.0) * w * w * w) + a;
-        return (b - a) * w + a;
-    }
-
-    float gridGradient(Vector2 pos, float align)
-    {
-        const float half_align = align / 2;
-        const int x0 = FloorToInt(pos.x / align);
-        const int y0 = FloorToInt(pos.y / align);
-        const int x1 = x0 + 1;
-        const int y1 = y0 + 1;
-
-        const Vector2 weight = (pos - Vector2(x0, y0) * align) / align;
-
-        const Vector2 loc_pos = pos - Vector2(x0, y0) * align - Vector2(half_align, half_align);
-//        const Vector2 loc_dir = loc_pos.normalized();
-
-        const Vector2 loc_dir00 = (loc_pos - Vector2(-half_align, -half_align)).normalized();
-        const Vector2 loc_dir10 = (loc_pos - Vector2(+half_align, -half_align)).normalized();
-        const Vector2 loc_dir01 = (loc_pos - Vector2(-half_align, +half_align)).normalized();
-        const Vector2 loc_dir11 = (loc_pos - Vector2(+half_align, +half_align)).normalized();
-
-        const Vector2 rand_dir00 = randomDir(IntVector2{x0, y0});
-        const Vector2 rand_dir10 = randomDir(IntVector2{x1, y0});
-        const Vector2 rand_dir01 = randomDir(IntVector2{x0, y1});
-        const Vector2 rand_dir11 = randomDir(IntVector2{x1, y1});
-
-        const float r00 = rand_dir00.DotProduct(loc_dir00);
-        const float r10 = rand_dir10.DotProduct(loc_dir10);
-        const float r01 = rand_dir01.DotProduct(loc_dir01);
-        const float r11 = rand_dir11.DotProduct(loc_dir11);
-
-        return interpolate(interpolate(r00, r10, weight.x), interpolate(r01, r11, weight.x),
-                           weight.y);
-
-        //        const Vector2 dir = (randomVector(cell) - Vector2(0.5f, 0.5f)).normalized();
-
-//        IntVector2 cell;
-//        cell.x = (int)(Floor(pos.x / align) * align);
-//        cell.y = (int)(Floor(pos.y / align) * align);
-
-//        Vector2 loc_pos;
-//        loc_pos.x = Fract(pos.x / align) * align - align/2;
-//        loc_pos.y = Fract(pos.y / align) * align - align/2;
-
-//        const Vector2 dir = (randomVector(cell) - Vector2(0.5f, 0.5f)).normalized();
-//        return dir.DotProduct(loc_pos.normalized());
-    }
-
     void draw() override
     {
         const int w = getWidth();
@@ -170,8 +84,8 @@ public:
         {
             for (int j = 0; j < w; j++)
             {
-                const float x = static_cast<float>(j) - offset.x * 100;
-                const float y = static_cast<float>(i) - offset.y * 100;
+                const float x = static_cast<float>(j) / 30 - offset.x * 100;
+                const float y = static_cast<float>(i) / 30 - offset.y * 100;
                 const Vector2 xy{x, y};
                 const auto col = [this, i, j](float r, float g, float b) { set(j, i, {r, g, b}); };
 
@@ -179,7 +93,7 @@ public:
                 float g{};
                 float b{};
 
-                float intensity = gridGradient(xy, 20);
+                float intensity = PerlinNoise::getNoise(xy);
                 if (intensity > 0)
                 {
                     r = intensity;
@@ -302,7 +216,7 @@ public:
             slider_x_->SetStyleAuto();
             slider_x_->SetRange(2);
             slider_x_->SetValue(1);
-            slider_x_->SetMinHeight(30);
+            slider_x_->SetMinHeight(20);
         }
         {
             slider_y_ = new Slider();
@@ -310,20 +224,29 @@ public:
             slider_y_->SetStyleAuto();
             slider_y_->SetRange(2);
             slider_y_->SetValue(1);
-            slider_y_->SetMinHeight(30);
+            slider_y_->SetMinHeight(20);
         }
         checkbox_ = new CheckBox();
         container->AddChild(checkbox_);
         checkbox_->SetChecked(true);
         checkbox_->SetStyleAuto();
-        checkbox_->SetFixedWidth(40);
-        checkbox_->SetFixedHeight(40);
+        checkbox_->SetFixedWidth(20);
+        checkbox_->SetFixedHeight(20);
+
+        fps_text_ = new Text();
+        container->AddChild(fps_text_);
+        fps_text_->SetStyleAuto();
+        fps_text_->SetFontSize(20);
+        fps_text_->SetMinHeight(20);
+        fps_text_->SetMinWidth(300);
+        fps_text_->SetText("fasfaf");
     }
 
 private:
     void on_update(StringHash /*event*/, VariantMap& data)
     {
         const float dt = data[Update::P_TIMESTEP].GetFloat();
+        fps_text_->SetText(String(1/dt));
         sprite_->setImage(image_);
         update_image();
     }
@@ -355,6 +278,7 @@ private:
     std::unique_ptr<ImagePainter> painter_;
 
     SharedPtr<Image> image_;
+    WeakPtr<Text> fps_text_;
     WeakPtr<CheckBox> checkbox_;
     WeakPtr<ImageSprite> sprite_;
     WeakPtr<Slider> slider_x_;
