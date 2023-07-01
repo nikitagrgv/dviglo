@@ -39,6 +39,11 @@ private:
         auto viewport = new Viewport(scene, camera);
         renderer->SetViewport(0, viewport);
 
+        auto zone_node = scene->create_child();
+        auto zone = zone_node->create_component<Zone>();
+        zone->SetBoundingBox(BoundingBox(Sphere(Vector3(), 400)));
+        zone->SetAmbientColor(Color(0.3, 0.5, 0.8));
+
         for (int i = 0; i < 10; i++)
         {
             for (int j = 0; j < 10; j++)
@@ -54,15 +59,22 @@ private:
             }
         }
 
-        auto light_node = scene->create_child();
-        auto light = light_node->create_component<Light>();
-        light->SetLightType(LIGHT_POINT);
-        light_node->SetPosition({1, 1, 1});
-        light->SetColor(Color::GREEN);
+        {
+            auto light_node = scene->create_child();
+            auto light = light_node->create_component<Light>();
+            light->SetLightType(LIGHT_POINT);
+            light_node->SetPosition({1, 1, 1});
+            light->SetColor(Color::GREEN);
+        }
+        {
+            auto light_node = scene->create_child();
+            auto light = light_node->create_component<Light>();
+            light->SetLightType(LIGHT_DIRECTIONAL);
+            light_node->SetDirection({-1, -1, -1});
+            light->SetColor(Color(0.2,0.3,0.7));
+        }
 
         auto skybox_node = scene->create_child();
-        skybox_node->SetPosition({0, 1, 0});
-        skybox_node->SetScale({300, 300, 300});
         auto skybox = skybox_node->create_component<Skybox>();
         skybox->SetModel(cache->GetResource<Model>("models/box.mdl"));
         skybox->SetMaterial(cache->GetResource<Material>("materials/skybox.xml"));
