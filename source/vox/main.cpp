@@ -80,52 +80,66 @@ private:
 
     void on_update(StringHash /*event*/, VariantMap& data)
     {
-        const float dt = data[Update::P_TIMESTEP].GetFloat();
         auto input = DV_INPUT;
-        const float speed = 3.f;
-        const float rot_speed = 15.0f;
+        auto engine = DV_ENGINE;
+
+        if (input->GetKeyPress(KEY_ESCAPE))
+        {
+            engine->Exit();
+        }
+
+        const float dt = data[Update::P_TIMESTEP].GetFloat();
+
+        float move_speed = 3.f;
+        if (input->GetKeyDown(KEY_SHIFT))
+        {
+            move_speed *= 2;
+        }
+
 
         Vector3 dir;
         if (input->GetKeyDown(KEY_D))
         {
-            dir.x += speed;
+            dir.x += move_speed;
         }
         if (input->GetKeyDown(KEY_A))
         {
-            dir.x -= speed;
+            dir.x -= move_speed;
         }
         if (input->GetKeyDown(KEY_W))
         {
-            dir.z += speed;
+            dir.z += move_speed;
         }
         if (input->GetKeyDown(KEY_S))
         {
-            dir.z -= speed;
+            dir.z -= move_speed;
         }
         if (input->GetKeyDown(KEY_E))
         {
-            dir.y += speed;
+            dir.y += move_speed;
         }
         if (input->GetKeyDown(KEY_Q))
         {
-            dir.y -= speed;
+            dir.y -= move_speed;
         }
         const Matrix3x4 rot_matr(Vector3{0, 0, 0}, camera_node_->GetWorldRotation(), 1.f);
         dir = rot_matr * dir;
 
-        float rot = 0;
-        if (input->GetKeyDown(KEY_LEFT))
-        {
-            rot -= rot_speed;
-        }
-        if (input->GetKeyDown(KEY_RIGHT))
-        {
-            rot += rot_speed;
-        }
-
-        camera_node_->RotateAround({0, 0}, Quaternion(rot * dt, {0,1,0}), dviglo::TransformSpace::Local);
         camera_node_->SetPosition(camera_node_->GetPosition() + dir * dt);
 
+        bool const looks_around = input->GetMouseButtonDown(MOUSEB_RIGHT);
+        DV_INPUT->SetMouseVisible(!looks_around);
+
+        if (looks_around)
+        {
+            const float rot_speed = 15.0f;
+
+            float const rot_pitch = input->GetMouseMoveY() * rot_speed * dt;
+            float const rot_yaw = input->GetMouseMoveX() * rot_speed * dt;
+            Quaternion rot = camera_node_->GetWorldRotation();
+            rot =  Quaternion(0, rot_yaw, 0) * rot * Quaternion(rot_pitch, 0, 0);
+            camera_node_->SetWorldRotation(rot);
+        }
         // random rotate
         for (const auto& cube : cubes_)
         {
