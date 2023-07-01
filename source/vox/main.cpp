@@ -1,24 +1,6 @@
 #include <iostream>
 
-// #include "dviglo/resource/resource_cache.h"
-// #include "dviglo/ui/check_box.h"
-// #include "dviglo/ui/list_view.h"
-// #include "dviglo/ui/scroll_view.h"
-// #include "dviglo/ui/slider.h"
-// #include "dviglo/ui/sprite.h"
-// #include <dviglo/core/core_events.h>
-// #include <dviglo/engine/application.h>
-// #include <dviglo/engine/engine_defs.h>
-// #include <dviglo/graphics/graphics.h>
-// #include <dviglo/graphics_api/texture_2d.h>
-// #include <dviglo/input/input.h>
-// #include <dviglo/io/log.h>
-// #include <dviglo/math/math_defs.h>
-// #include <dviglo/ui/button.h>
-// #include <dviglo/ui/ui.h>
-// #include <dviglo/ui/ui_element.h>
-// #include <dviglo/ui/ui_events.h>
-// #include <dviglo/math/random.h>
+#include "Draggable.h"
 #include <dviglo/dviglo_all.h>
 
 using namespace dviglo;
@@ -38,13 +20,14 @@ public:
         subscribe_to_event(E_UPDATE, DV_HANDLER(App, on_update));
 
         init_world();
+        init_gui();
     }
 
 private:
     void init_world()
     {
-        auto cache = DV_RES_CACHE;
-        auto renderer = DV_RENDERER;
+        ResourceCache* cache = DV_RES_CACHE;
+        Renderer* renderer = DV_RENDERER;
 
         auto scene = new Scene();
         scene->create_component<Octree>();
@@ -78,6 +61,23 @@ private:
         light->SetColor(Color::GREEN);
     }
 
+    void init_gui()
+    {
+        UI* ui = DV_UI;
+        auto root = ui->GetRoot();
+        auto* style = DV_RES_CACHE->GetResource<XmlFile>("ui/default_style.xml");
+        root->SetDefaultStyle(style);
+
+        auto window = new Draggable<Window>();
+        root->AddChild(window);
+        window->SetColor(Color(0.5, 0.6, 0.3, 0.5));
+        window->SetMinWidth(384);
+        window->SetMinHeight(384);
+        window->SetLayout(LM_VERTICAL, 6, IntRect(6, 6, 6, 6));
+        window->SetAlignment(HA_CENTER, VA_CENTER);
+        window->SetStyleAuto();
+    }
+
     void on_update(StringHash /*event*/, VariantMap& data)
     {
         auto input = DV_INPUT;
@@ -95,7 +95,6 @@ private:
         {
             move_speed *= 2;
         }
-
 
         Vector3 dir;
         if (input->GetKeyDown(KEY_D))
@@ -137,7 +136,7 @@ private:
             float const rot_pitch = input->GetMouseMoveY() * rot_speed * dt;
             float const rot_yaw = input->GetMouseMoveX() * rot_speed * dt;
             Quaternion rot = camera_node_->GetWorldRotation();
-            rot =  Quaternion(0, rot_yaw, 0) * rot * Quaternion(rot_pitch, 0, 0);
+            rot = Quaternion(0, rot_yaw, 0) * rot * Quaternion(rot_pitch, 0, 0);
             camera_node_->SetWorldRotation(rot);
         }
         // random rotate
