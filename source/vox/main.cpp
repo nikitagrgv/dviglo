@@ -59,6 +59,13 @@ private:
         light->SetLightType(LIGHT_POINT);
         light_node->SetPosition({1, 1, 1});
         light->SetColor(Color::GREEN);
+
+        auto skybox_node = scene->create_child();
+        skybox_node->SetPosition({0, 1, 0});
+        skybox_node->SetScale({300, 300, 300});
+        auto skybox = skybox_node->create_component<Skybox>();
+        skybox->SetModel(cache->GetResource<Model>("models/box.mdl"));
+        skybox->SetMaterial(cache->GetResource<Material>("materials/skybox.xml"));
     }
 
     void init_gui()
