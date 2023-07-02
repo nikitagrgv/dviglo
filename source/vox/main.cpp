@@ -8,6 +8,8 @@ using namespace dviglo;
 class Selection
 {
 public:
+    Signal<> changed;
+
     void postUpdate() { refresh_nodes(); }
 
     void render(DebugRenderer* renderer) const
@@ -36,6 +38,7 @@ public:
         if (it == end(nodes_))
         {
             nodes_.Push(node);
+            changed.emit();
         }
     }
 
@@ -50,12 +53,17 @@ public:
         if (it != end(nodes_))
         {
             nodes_.Erase(it);
+            changed.emit();
         }
     }
 
     bool isSelected(const WeakPtr<Node>& node) const { return nodes_.Find(node) != end(nodes_); }
 
-    void clear() { nodes_.Clear(); }
+    void clear()
+    {
+        nodes_.Clear();
+        changed.emit();
+    }
 
     const Vector<WeakPtr<Node>> &getNodes() const { return nodes_; }
 
@@ -69,6 +77,99 @@ private:
 
 private:
     Vector<WeakPtr<Node>> nodes_;
+};
+
+class NodeParameters
+{
+public:
+    NodeParameters(Selection& selection)
+        : selection_(selection)
+    {
+        selection_.changed.connect(selection_changed_, [this]() { on_selection_changed(); });
+        init_gui();
+    }
+
+    void update()
+    {
+        auto nodes = selection_.getNodes();
+    }
+
+private:
+    void init_gui()
+    {
+        UI* ui = DV_UI;
+        auto root = ui->GetRoot();
+
+        window_ = new Draggable<Window>();
+        root->AddChild(window_);
+        window_->SetColor(Color(0.5, 0.6, 0.3, 0.5));
+        window_->SetLayout(LM_VERTICAL, 6, IntRect(6, 6, 6, 6));
+        window_->SetAlignment(HA_LEFT, VA_TOP);
+        window_->SetStyleAuto();
+//        window_->SetMinWidth(200);
+//        window_->SetMinHeight(200);
+    }
+
+    void on_selection_changed()
+    {
+        refresh();
+    }
+
+    void refresh()
+    {
+        window_->RemoveAllChildren();
+
+        for (const auto& node : selection_.getNodes())
+        {
+            add_node_info(node, window_);
+        }
+    }
+
+    void add_node_info(Node* node, UiElement* parent)
+    {
+        auto ver_layout = new UiElement();
+        parent->AddChild(ver_layout);
+        ver_layout->SetStyleAuto();
+        ver_layout->SetLayout(LM_VERTICAL, 4);
+
+        {
+            auto hor_layout = new UiElement();
+            ver_layout->AddChild(hor_layout);
+            hor_layout->SetStyleAuto();
+            hor_layout->SetLayout(LM_HORIZONTAL, 4);
+
+            auto label_name = new Text();
+            hor_layout->AddChild(label_name);
+            label_name->SetStyleAuto();
+            label_name->SetText("Name:");
+
+            auto name = new Text();
+            hor_layout->AddChild(name);
+            name->SetStyleAuto();
+            name->SetText(String(node->GetName()));
+        }
+        {
+            auto hor_layout = new UiElement();
+            ver_layout->AddChild(hor_layout);
+            hor_layout->SetStyleAuto();
+            hor_layout->SetLayout(LM_HORIZONTAL, 4);
+
+            auto label_id = new Text();
+            hor_layout->AddChild(label_id);
+            label_id->SetStyleAuto();
+            label_id->SetText("Id:");
+
+            auto id = new Text();
+            hor_layout->AddChild(id);
+            id->SetStyleAuto();
+            id->SetText(String(node->GetID()));
+        }
+    }
+
+private:
+    WeakPtr<Window> window_;
+    Selection& selection_;
+    Slot<> selection_changed_;
 };
 
 class App : public Application
@@ -93,6 +194,8 @@ public:
 //        File saveFile(DV_FILE_SYSTEM->GetProgramDir() + "data1/out.xml", FILE_WRITE);
 //        scene_->save_xml(saveFile);
         init_gui();
+
+        node_parameters_ = std::make_unique<NodeParameters>(selection_);
     }
 
 private:
@@ -175,15 +278,6 @@ private:
         auto root = ui->GetRoot();
         auto* style = DV_RES_CACHE->GetResource<XmlFile>("ui/default_style.xml");
         root->SetDefaultStyle(style);
-
-//        auto window = new Draggable<Window>();
-//        root->AddChild(window);
-//        window->SetColor(Color(0.5, 0.6, 0.3, 0.5));
-//        window->SetMinWidth(384);
-//        window->SetMinHeight(384);
-//        window->SetLayout(LM_VERTICAL, 6, IntRect(6, 6, 6, 6));
-//        window->SetAlignment(HA_CENTER, VA_CENTER);
-//        window->SetStyleAuto();
     }
 
     void on_mouse_release(StringHash /*event*/, VariantMap& data)
@@ -211,6 +305,11 @@ private:
         RayOctreeQuery q(result, ray, RAY_TRIANGLE, M_INFINITY,
                          dviglo::DrawableTypes::Geometry);
         octree_->RaycastSingle(q);
+
+        if (q.result_.Empty() && !ctrl && !shift)
+        {
+            selection_.clear();
+        }
 
         for (auto r : q.result_)
         {
@@ -247,6 +346,8 @@ private:
         }
 
         const float dt = data[Update::P_TIMESTEP].GetFloat();
+
+        node_parameters_->update();
 
         float move_speed = 3.f;
         if (input->GetKeyDown(KEY_SHIFT))
@@ -328,6 +429,7 @@ private:
     }
 
 private:
+    std::unique_ptr<NodeParameters> node_parameters_;
     Selection selection_;
 
     bool render_debug_{false};
