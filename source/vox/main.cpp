@@ -18,8 +18,11 @@ public:
     {
         DV_INPUT->SetMouseVisible(true);
         subscribe_to_event(E_UPDATE, DV_HANDLER(App, on_update));
+        subscribe_to_event(E_MOUSEBUTTONUP, DV_HANDLER(App, on_mouse_release));
 
         init_world();
+//        File saveFile(DV_FILE_SYSTEM->GetProgramDir() + "data1/out.xml", FILE_WRITE);
+//        scene_->save_xml(saveFile);
         init_gui();
     }
 
@@ -29,18 +32,18 @@ private:
         ResourceCache* cache = DV_RES_CACHE;
         Renderer* renderer = DV_RENDERER;
 
-        auto scene = new Scene();
-        scene->create_component<Octree>();
+        scene_ = new Scene();
+        octree_ = scene_->create_component<Octree>();
 
-        camera_node_ = scene->create_child();
+        camera_node_ = scene_->create_child();
         auto camera = camera_node_->create_component<Camera>();
         camera->SetFov(80);
         camera_node_->SetPosition({-0.1f, 0.2f, -5.f});
 
-        auto viewport = new Viewport(scene, camera);
+        auto viewport = new Viewport(scene_, camera);
         renderer->SetViewport(0, viewport);
 
-        auto zone_node = scene->create_child();
+        auto zone_node = scene_->create_child();
         auto zone = zone_node->create_component<Zone>();
         zone->SetBoundingBox(BoundingBox(Sphere(Vector3(), 400)));
         zone->SetAmbientColor(Color(0.3, 0.5, 0.8));
@@ -57,7 +60,7 @@ private:
             {
                 for (int k = 0; k < 10; k++)
                 {
-                    auto box_node = scene->create_child();
+                    auto box_node = scene_->create_child();
                     box_node->SetPosition({i * 2.f, j * 2.f, k * 2.f});
                     auto model = box_node->create_component<StaticModel>();
                     model->SetModel(cache->GetResource<Model>("models/pyramid.mdl"));
@@ -68,21 +71,21 @@ private:
         }
 
         {
-            auto light_node = scene->create_child();
+            auto light_node = scene_->create_child();
             auto light = light_node->create_component<Light>();
             light->SetLightType(LIGHT_POINT);
             light_node->SetPosition({1, 1, 1});
             light->SetColor(Color::GREEN);
         }
         {
-            auto light_node = scene->create_child();
+            auto light_node = scene_->create_child();
             auto light = light_node->create_component<Light>();
             light->SetLightType(LIGHT_DIRECTIONAL);
             light_node->SetDirection({-1, -1, -1});
             light->SetColor(Color(0.2,0.3,0.7));
         }
 
-        auto skybox_node = scene->create_child();
+        auto skybox_node = scene_->create_child();
         auto skybox = skybox_node->create_component<Skybox>();
         skybox->SetModel(cache->GetResource<Model>("models/box.mdl"));
         skybox->SetMaterial(cache->GetResource<Material>("materials/skybox.xml"));
@@ -111,6 +114,26 @@ private:
 //        window->SetLayout(LM_VERTICAL, 6, IntRect(6, 6, 6, 6));
 //        window->SetAlignment(HA_CENTER, VA_CENTER);
 //        window->SetStyleAuto();
+    }
+
+    void on_mouse_release(StringHash /*event*/, VariantMap& data)
+    {
+        if (data[MouseButtonUp::P_BUTTON] != MOUSEB_LEFT)
+        {
+            return;
+        }
+        Vector<RayQueryResult> result;
+        Vector3 const origin = camera_node_->GetPosition();
+        Vector3 const dir = camera_node_->GetWorldDirection();
+        RayOctreeQuery q(result, Ray(origin, dir), RAY_TRIANGLE, M_INFINITY,
+                         dviglo::DrawableTypes::Geometry);
+        octree_->RaycastSingle(q);
+
+        for (auto r : q.result_)
+        {
+            Log::WriteFormat(1, "NODE: %d", r.node_->GetID());
+            r.node_->Remove();
+        }
     }
 
     void on_update(StringHash /*event*/, VariantMap& data)
@@ -175,6 +198,9 @@ private:
             camera_node_->SetWorldRotation(rot);
         }
         // random rotate
+        cubes_.Erase(std::remove_if(begin(cubes_), end(cubes_),
+                                    [](const WeakPtr<Node>& node) { return node.Expired(); }),
+                     end(cubes_));
         for (int i = 0; i < cubes_.Size(); i++)
         {
             auto& cube = cubes_[i];
@@ -192,6 +218,8 @@ private:
 
 private:
     Vector<WeakPtr<Node>> cubes_;
+    WeakPtr<Octree> octree_;
+    WeakPtr<Scene> scene_;
     WeakPtr<Node> camera_node_;
 };
 
