@@ -5,6 +5,72 @@
 
 using namespace dviglo;
 
+class Selection
+{
+public:
+    void postUpdate() { refresh_nodes(); }
+
+    void render(DebugRenderer* renderer) const
+    {
+        for (const auto& node : nodes_)
+        {
+            for (const auto & component : node->GetComponents())
+            {
+                auto drawable = DynamicCast<Drawable>(component);
+                if (drawable)
+                {
+                    renderer->AddBoundingBox(drawable->GetWorldBoundingBox(), Color::GREEN, false);
+                }
+            }
+        }
+    }
+
+    void add(const WeakPtr<Node>& node)
+    {
+        if (node.Expired())
+        {
+            return;
+        }
+
+        auto it = nodes_.Find(node);
+        if (it == end(nodes_))
+        {
+            nodes_.Push(node);
+        }
+    }
+
+    void remove(const WeakPtr<Node>& node)
+    {
+        if (node.Expired())
+        {
+            return;
+        }
+
+        auto it = nodes_.Find(node);
+        if (it != end(nodes_))
+        {
+            nodes_.Erase(it);
+        }
+    }
+
+    bool isSelected(const WeakPtr<Node>& node) const { return nodes_.Find(node) != end(nodes_); }
+
+    void clear() { nodes_.Clear(); }
+
+    const Vector<WeakPtr<Node>> &getNodes() const { return nodes_; }
+
+private:
+    void refresh_nodes()
+    {
+        nodes_.Erase(std::remove_if(begin(nodes_), end(nodes_),
+                                    [](const WeakPtr<Node>& node) { return node.Expired(); }),
+                     end(nodes_));
+    }
+
+private:
+    Vector<WeakPtr<Node>> nodes_;
+};
+
 class App : public Application
 {
 public:
@@ -19,6 +85,9 @@ public:
         DV_INPUT->SetMouseVisible(true);
         subscribe_to_event(E_UPDATE, DV_HANDLER(App, on_update));
         subscribe_to_event(E_MOUSEBUTTONUP, DV_HANDLER(App, on_mouse_release));
+        subscribe_to_event(E_POSTUPDATE, DV_HANDLER(App, on_post_update));
+        subscribe_to_event(E_POSTRENDERUPDATE, DV_HANDLER(App, on_post_render_update));
+
 
         init_world();
 //        File saveFile(DV_FILE_SYSTEM->GetProgramDir() + "data1/out.xml", FILE_WRITE);
@@ -34,6 +103,7 @@ private:
 
         scene_ = new Scene();
         octree_ = scene_->create_component<Octree>();
+        debug_renderer_ = scene_->create_component<DebugRenderer>();
 
         camera_node_ = scene_->create_child();
         auto camera = camera_node_->create_component<Camera>();
@@ -54,11 +124,11 @@ private:
         auto texture = cache->GetResource<Texture2D>("vox/1.jpg");
         mat->SetTexture(TU_DIFFUSE, texture);
 
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 5; i++)
         {
-            for (int j = 0; j < 10; j++)
+            for (int j = 0; j < 5; j++)
             {
-                for (int k = 0; k < 10; k++)
+                for (int k = 0; k < 5; k++)
                 {
                     auto box_node = scene_->create_child();
                     box_node->SetPosition({i * 2.f, j * 2.f, k * 2.f});
@@ -144,8 +214,20 @@ private:
 
         for (auto r : q.result_)
         {
-            Log::WriteFormat(1, "NODE: %d (%d %d)", r.node_->GetID(), shift, ctrl);
-            r.node_->Remove();
+            const WeakPtr<Node> node(r.node_);
+            if (ctrl && !shift)
+            {
+                selection_.add(node);
+            }
+            if (shift && ! ctrl)
+            {
+                selection_.remove(node);
+            }
+            if (!shift && !ctrl)
+            {
+                selection_.clear();
+                selection_.add(node);
+            }
         }
     }
 
@@ -157,6 +239,11 @@ private:
         if (input->GetKeyPress(KEY_ESCAPE))
         {
             engine->Exit();
+        }
+
+        if (input->GetKeyPress(KEY_F1))
+        {
+            render_debug_ = !render_debug_;
         }
 
         const float dt = data[Update::P_TIMESTEP].GetFloat();
@@ -229,9 +316,25 @@ private:
         }
     }
 
+    void on_post_update(StringHash /*event*/, VariantMap& data) { selection_.postUpdate(); }
+
+    void on_post_render_update(StringHash /*event*/, VariantMap& data)
+    {
+        if (render_debug_)
+        {
+            DV_RENDERER->draw_debug_geometry(false);
+        }
+        selection_.render(debug_renderer_);
+    }
+
 private:
+    Selection selection_;
+
+    bool render_debug_{false};
+
     Vector<WeakPtr<Node>> cubes_;
     WeakPtr<Octree> octree_;
+    WeakPtr<DebugRenderer> debug_renderer_;
     WeakPtr<Scene> scene_;
     WeakPtr<Node> camera_node_;
 };
