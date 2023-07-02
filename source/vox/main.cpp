@@ -118,6 +118,15 @@ private:
 
     void on_mouse_release(StringHash /*event*/, VariantMap& data)
     {
+        if (DV_INPUT->GetMouseButtonDown(MOUSEB_RIGHT))
+        {
+            return;
+        }
+
+        auto viewport = DV_RENDERER->GetViewport(0);
+        auto mouse_pos = DV_INPUT->GetMousePosition();
+        auto ray = viewport->GetScreenRay(mouse_pos.x, mouse_pos.y);
+
         if (data[MouseButtonUp::P_BUTTON] != MOUSEB_LEFT)
         {
             return;
@@ -125,7 +134,7 @@ private:
         Vector<RayQueryResult> result;
         Vector3 const origin = camera_node_->GetPosition();
         Vector3 const dir = camera_node_->GetWorldDirection();
-        RayOctreeQuery q(result, Ray(origin, dir), RAY_TRIANGLE, M_INFINITY,
+        RayOctreeQuery q(result, ray, RAY_TRIANGLE, M_INFINITY,
                          dviglo::DrawableTypes::Geometry);
         octree_->RaycastSingle(q);
 
