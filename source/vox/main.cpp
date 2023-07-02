@@ -118,6 +118,10 @@ private:
 
     void on_mouse_release(StringHash /*event*/, VariantMap& data)
     {
+        const int qualifiers = data[MouseButtonUp::P_QUALIFIERS].GetI32();
+        const bool ctrl = qualifiers & Qualifier::QUAL_CTRL;
+        const bool shift = qualifiers & Qualifier::QUAL_SHIFT;
+
         if (DV_INPUT->GetMouseButtonDown(MOUSEB_RIGHT))
         {
             return;
@@ -140,7 +144,7 @@ private:
 
         for (auto r : q.result_)
         {
-            Log::WriteFormat(1, "NODE: %d", r.node_->GetID());
+            Log::WriteFormat(1, "NODE: %d (%d %d)", r.node_->GetID(), shift, ctrl);
             r.node_->Remove();
         }
     }
