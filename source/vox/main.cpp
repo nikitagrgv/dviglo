@@ -34,6 +34,7 @@ private:
 
         camera_node_ = scene->create_child();
         auto camera = camera_node_->create_component<Camera>();
+        camera->SetFov(80);
         camera_node_->SetPosition({-0.1f, 0.2f, -5.f});
 
         auto viewport = new Viewport(scene, camera);
@@ -44,6 +45,12 @@ private:
         zone->SetBoundingBox(BoundingBox(Sphere(Vector3(), 400)));
         zone->SetAmbientColor(Color(0.3, 0.5, 0.8));
 
+        auto tech = cache->GetResource<Technique>("techniques/diff.xml");
+        auto mat = new Material();
+        mat->SetTechnique(0, tech);
+        auto texture = cache->GetResource<Texture2D>("vox/1.jpg");
+        mat->SetTexture(TU_DIFFUSE, texture);
+
         for (int i = 0; i < 10; i++)
         {
             for (int j = 0; j < 10; j++)
@@ -53,7 +60,8 @@ private:
                     auto box_node = scene->create_child();
                     box_node->SetPosition({i * 2.f, j * 2.f, k * 2.f});
                     auto model = box_node->create_component<StaticModel>();
-                    model->SetModel(cache->GetResource<Model>("models/box.mdl"));
+                    model->SetModel(cache->GetResource<Model>("models/pyramid.mdl"));
+                    model->SetMaterial(mat);
                     cubes_.Push(WeakPtr(box_node));
                 }
             }
@@ -78,6 +86,14 @@ private:
         auto skybox = skybox_node->create_component<Skybox>();
         skybox->SetModel(cache->GetResource<Model>("models/box.mdl"));
         skybox->SetMaterial(cache->GetResource<Material>("materials/skybox.xml"));
+        auto cubemap = new TextureCube();
+        cubemap->SetData((CubeMapFace)0, cache->GetResource<Image>("vox/1.jpg"));
+        cubemap->SetData((CubeMapFace)1, cache->GetResource<Image>("vox/2.jpg"));
+        cubemap->SetData((CubeMapFace)2, cache->GetResource<Image>("vox/3.jpg"));
+        cubemap->SetData((CubeMapFace)3, cache->GetResource<Image>("vox/4.jpg"));
+        cubemap->SetData((CubeMapFace)4, cache->GetResource<Image>("vox/5.jpg"));
+        cubemap->SetData((CubeMapFace)5, cache->GetResource<Image>("vox/8.jpg"));
+        skybox->GetMaterial()->SetTexture(TU_DIFFUSE, cubemap);
     }
 
     void init_gui()
@@ -87,14 +103,14 @@ private:
         auto* style = DV_RES_CACHE->GetResource<XmlFile>("ui/default_style.xml");
         root->SetDefaultStyle(style);
 
-        auto window = new Draggable<Window>();
-        root->AddChild(window);
-        window->SetColor(Color(0.5, 0.6, 0.3, 0.5));
-        window->SetMinWidth(384);
-        window->SetMinHeight(384);
-        window->SetLayout(LM_VERTICAL, 6, IntRect(6, 6, 6, 6));
-        window->SetAlignment(HA_CENTER, VA_CENTER);
-        window->SetStyleAuto();
+//        auto window = new Draggable<Window>();
+//        root->AddChild(window);
+//        window->SetColor(Color(0.5, 0.6, 0.3, 0.5));
+//        window->SetMinWidth(384);
+//        window->SetMinHeight(384);
+//        window->SetLayout(LM_VERTICAL, 6, IntRect(6, 6, 6, 6));
+//        window->SetAlignment(HA_CENTER, VA_CENTER);
+//        window->SetStyleAuto();
     }
 
     void on_update(StringHash /*event*/, VariantMap& data)
@@ -159,11 +175,18 @@ private:
             camera_node_->SetWorldRotation(rot);
         }
         // random rotate
-        for (const auto& cube : cubes_)
+        for (int i = 0; i < cubes_.Size(); i++)
         {
-            cube->RotateAround(
-                Vector3{}, Quaternion(dt * 5.f, Vector3{Random(1.0f), Random(1.0f), Random(1.0f)}),
-                dviglo::TransformSpace::Local);
+            auto& cube = cubes_[i];
+            auto p_rot = cube->GetRotation();
+
+            float r1 = Random(-50.f, 50.0f) * dt;
+            float r2 = Random(-50.f, 50.0f) * dt;
+            float r3 = Random(-50.f, 50.0f) * dt;
+
+            Quaternion rot = p_rot * Quaternion(r1, r2, r3);
+
+            cube->SetRotation(rot);
         }
     }
 
